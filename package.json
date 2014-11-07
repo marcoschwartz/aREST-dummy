@@ -1,5 +1,5 @@
 {
-  "name": "pi-arest",
+  "name": "arest-dummy",
   "version": "0.1.8",
   "description": "Dummy version of the aREST API emulating an Arduino board",
   "main": "index.js",
@@ -11,7 +11,7 @@
     "url": "https://github.com/marcoschwartz/aREST-dummy"
   },
   "keywords": [
-    "Raspberry Pi"
+    "Arduino"
   ],
   "author": "Marco Schwartz <marcolivier.schwartz@gmail.com> (http://www.marcoschwartz.com/)",
   "license": "ISC",
@@ -20,5 +20,8 @@
   },
   "homepage": "https://github.com/marcoschwartz/aREST-dummy",
   "dependencies": {
+    "request": "*",
+    "serialport": "*",
+    "ws": "*"
   }
 }
