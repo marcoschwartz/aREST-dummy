@@ -1,8 +1,8 @@
 // Requires
 var request = require("request");
-var WebSocket = require('ws');
-var serialport = require('serialport');
-var SerialPort = serialport.SerialPort;
+var mqtt = require('mqtt');
+// var serialport = require('serialport');
+// var SerialPort = serialport.SerialPort;
 
 // aREST class
 var device = {
@@ -40,7 +40,7 @@ module.exports = function (app) {
       answer.connected = true;
 
       if (req.params.state == 'i'){
-        answer.message = 'Pin D' + req.params.pin + ' set to input';  
+        answer.message = 'Pin D' + req.params.pin + ' set to input';
       }
       if (req.params.state == 'o'){
         answer.message = 'Pin D' + req.params.pin + ' set to output';
@@ -97,7 +97,7 @@ module.exports = function (app) {
 
           // Get value
           value = device.digital_pins[req.params.pin];
-    
+
           var answer = new Object();
           answer.id = device.id;
           answer.name  = device.name;
@@ -115,7 +115,7 @@ module.exports = function (app) {
 
           // Get value
           value = device.analog_pins[req.params.pin];
-    
+
           var answer = new Object();
           answer.id = device.id;
           answer.name  = device.name;
@@ -155,13 +155,13 @@ module.exports = function (app) {
     app.get('/', function(req, res){
 
       console.log('Root request');
-      
+
       var answer = new Object();
       answer.id = device.id;
       answer.name  = device.name;
       answer.variables = device.variables;
       answer.connected = true;
-      
+
       console.log(answer);
       res.json(answer);
     });
@@ -192,26 +192,40 @@ module.exports = function (app) {
           },500);
       });
       device.serialPort.write(Buffer('Works' + '\r'));
-    });  
+    });
 
     },
-    connect_ws: function(remote_server, port) {
+    connect: function(port) {
 
-      var ws = new WebSocket(remote_server);
+      // Connect to MQTT
+      var client  = mqtt.connect({clientId: device.id, host: '45.55.79.41', port: 1883 });
+      var in_topic = device.id + '_in';
+      var out_topic = device.id + '_out';
 
-      ws.on('open', function() {
-        console.log('Opened WebSocket connection');
+      // If connected
+      client.on('connect', function () {
 
-        ws.on('message', function(message) {
-          console.log('Received command: %s', message);
-          request('http://localhost:' + port + '/' + message, function(error, response, body) {
-            console.log('Returned command: %s', body);
-            ws.send(body);
-          });
+        console.log('Connected to aREST.io');
+
+        // Subscribe
+        client.subscribe(in_topic);
+
+      });
+
+      client.on('message', function (topic, message) {
+
+        // Message is Buffer
+        var incomingMessage = message.toString();
+
+        // Process
+        splitMessage = incomingMessage.split('/');
+
+        request('http://localhost:' + port + '/' + splitMessage, function(error, response, body) {
+          client.publish(out_topic, body);
         });
 
       });
-    
+
     },
     set_id: function(new_id) {
       device.id = new_id;
@@ -223,7 +237,7 @@ module.exports = function (app) {
       device.serial_port = serial_port;
     },
     variable: function(variable_name,variable_value){
-      device.variables[variable_name] = variable_value;  
+      device.variables[variable_name] = variable_value;
     },
     function: function(function_name,function_value){
       device.functions[function_name] = function_value;
